@@ -169,7 +169,12 @@ namespace Chameleon
 			if (!PrepareList.Contains(player.Name))
 			{
 				AddToList(player.Name);
-				Kick(player, " ↓↓↓ 请看下面的提示 ↓↓↓\r\n \r\n \r\n \r\n    请再次加服后, 在\"服务器密码\"中输入自己的密码, 以后加服时输入这个密码即可.\r\n       If you are using English version of Terraria currently, \r\n       go back and install Chinese version please");
+				Kick(player, "↓↓ 请看下面的提示以进服 ↓↓" +
+				             "\r\n \r\n         看完下面的再点哦→" +
+				             "\r\n 1. 请确保你已经阅读进服教程 http://tr.xcoder.cc/ " +
+				             "\r\n 2. 请再次加服 \r\n 3. 在\"服务器密码\"中输入自己的密码, 以后加服时输入这个密码即可." +
+				             "\r\n        Could not see words above? " +
+				             "\r\n             Go back and install Chinese version!");
 				return true;
 			}
 
@@ -250,7 +255,7 @@ namespace Chameleon
 				}
 				catch (ArgumentOutOfRangeException)
 				{
-					Kick(player, "密码位数不能少于 " + TShock.Config.MinimumPasswordLength + " 个字符.", "验证失败");
+					Kick(player, "密码位数不能少于 " + TShock.Config.MinimumPasswordLength + " 个字符.", "注册失败");
 					return true;
 				}
 				player.SendSuccessMessage("账户 {0} 注册成功.", user.Name);
@@ -317,7 +322,7 @@ namespace Chameleon
 				return;
 
 			player.SilentKickInProgress = true;
-			player.Disconnect($"欢迎来到 Terraria Boss 服务器: {msg}");
+			player.Disconnect($"   欢迎来到Terraria Boss服务器: {msg}");
 			TShock.Log.ConsoleInfo($"向{player.Name}发送初次通知完毕.");
 		}
 
