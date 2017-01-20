@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.IO.Streams;
+using System.Linq;
 using System.Reflection;
 using Terraria;
 using TerrariaApi.Server;
@@ -13,6 +14,8 @@ namespace Chameleon
 	public class Chameleon : TerrariaPlugin
 	{
 		public const string WaitPwd4Reg = "reg-pwd";
+
+		public static string[] PrepareList = new string[10];
 
 		public override string Name => Assembly.GetExecutingAssembly().GetName().Name;
 
@@ -28,6 +31,30 @@ namespace Chameleon
 		{
 			ServerApi.Hooks.NetGetData.Register(this, OnGetData, 9999);
 			ServerApi.Hooks.GamePostInitialize.Register(this, OnPostInit, 9999);
+			ServerApi.Hooks.NetSendData.Register(this, OnSendData, 9999);
+		}
+
+		private static void OnSendData(SendDataEventArgs args)
+		{
+			if (args.Handled || args.MsgId != PacketTypes.Disconnect)
+				return;
+
+			var memoryStream = new MemoryStream();
+			var binaryWriter = new BinaryWriter(memoryStream);
+			var position = binaryWriter.BaseStream.Position;
+			binaryWriter.BaseStream.Position += 2L;
+			binaryWriter.Write((byte)args.MsgId);
+
+			binaryWriter.Write(args.text);
+
+			var currentPosition = (int)binaryWriter.BaseStream.Position;
+			binaryWriter.BaseStream.Position = position;
+			binaryWriter.Write((short)currentPosition);
+			binaryWriter.BaseStream.Position = currentPosition;
+			var data = memoryStream.ToArray();
+
+			TShock.Players[args.remoteClient].SendRawData(data);
+			args.Handled = true;
 		}
 
 		private static void OnPostInit(EventArgs args)
@@ -37,7 +64,7 @@ namespace Chameleon
 				TShock.Log.ConsoleError("[Chameleon] 在启用本插件的情况下, 服务器密码功能将失效.");
 			}
 
-			if (!TShock.Config.DisableLoginBeforeJoin)
+			if (TShock.Config.DisableLoginBeforeJoin)
 			{
 				TShock.Log.ConsoleError("[Chameleon] 在启用本插件的情况下, 入服前登录将被强制开启.");
 				TShock.Config.DisableLoginBeforeJoin = true;
@@ -139,6 +166,13 @@ namespace Chameleon
 				return true;
 			}
 
+			if (!PrepareList.Contains(player.Name))
+			{
+				AddToList(player.Name);
+				Kick(player, " ↓↓↓ 请看下面的提示 ↓↓↓\r\n \r\n \r\n \r\n    请再次加服后, 在\"服务器密码\"中输入自己的密码, 以后加服时输入这个密码即可.\r\n       If you are using English version of Terraria currently, \r\n       go back and install Chinese version please");
+				return true;
+			}
+
 			// 未注册 part.1
 			player.SetData(WaitPwd4Reg, true);
 			NetMessage.SendData((int)PacketTypes.PasswordRequired, player.Index);
@@ -199,7 +233,7 @@ namespace Chameleon
 					TShockAPI.Hooks.PlayerHooks.OnPlayerPostLogin(player);
 					return true;
 				}
-				TShock.Utils.ForceKick(player, "账户密码错误. 若忘记, 请联系管理.\r\n换行测试\r\n         请联系管理谢谢\r\n新测试", true);
+				Kick(player, "账户密码错误. 若忘记, 请联系管理.", "验证失败");
 				return true;
 			}
 			if (player.Name != TSServerPlayer.AccountName)
@@ -216,7 +250,7 @@ namespace Chameleon
 				}
 				catch (ArgumentOutOfRangeException)
 				{
-					TShock.Utils.ForceKick(player, "密码位数不能少于 " + TShock.Config.MinimumPasswordLength + " 个字符.", true);
+					Kick(player, "密码位数不能少于 " + TShock.Config.MinimumPasswordLength + " 个字符.", "验证失败");
 					return true;
 				}
 				player.SendSuccessMessage("账户 {0} 注册成功.", user.Name);
@@ -266,8 +300,35 @@ namespace Chameleon
 			}
 
 			// 系统预留账户名
-			TShock.Utils.ForceKick(player, "该用户名已被占用.", true);
+			Kick(player, "该用户名已被占用.", "请更换人物名");
 			return true;
+		}
+
+		private static void AddToList(string playerName)
+		{
+			var index = 0;
+			while (!string.IsNullOrEmpty(PrepareList[index])) index++;
+			PrepareList[index % PrepareList.Length] = playerName;
+		}
+
+		public static void Kick(TSPlayer player, string msg)
+		{
+			if (!player.ConnectionAlive)
+				return;
+
+			player.SilentKickInProgress = true;
+			player.Disconnect($"欢迎来到 Terraria Boss 服务器: {msg}");
+			TShock.Log.ConsoleInfo($"向{player.Name}发送初次通知完毕.");
+		}
+
+		public static void Kick(TSPlayer player, string msg, string custom)
+		{
+			if (!player.ConnectionAlive)
+				return;
+
+			player.SilentKickInProgress = true;
+			player.Disconnect($"{custom}: {msg}");
+			TShock.Log.ConsoleInfo($"向{player.Name}发送通知完毕.");
 		}
 	}
 }
