@@ -30,11 +30,17 @@ namespace Chameleon
 			ServerApi.Hooks.GamePostInitialize.Register(this, OnPostInit, 9999);
 		}
 
-		private void OnPostInit(EventArgs args)
+		private static void OnPostInit(EventArgs args)
 		{
 			if (!string.IsNullOrEmpty(TShock.Config.ServerPassword) || !string.IsNullOrEmpty(Netplay.ServerPassword))
 			{
 				TShock.Log.ConsoleError("[Chameleon] 在启用本插件的情况下, 服务器密码功能将失效.");
+			}
+
+			if (!TShock.Config.DisableLoginBeforeJoin)
+			{
+				TShock.Log.ConsoleError("[Chameleon] 在启用本插件的情况下, 入服前登录将被强制开启.");
+				TShock.Config.DisableLoginBeforeJoin = true;
 			}
 		}
 
@@ -67,6 +73,7 @@ namespace Chameleon
 
 			using (var data = new MemoryStream(args.Msg.readBuffer, args.Index, args.Length - 1))
 			{
+				// ReSharper disable once ConvertIfStatementToSwitchStatement
 				if (type == PacketTypes.ContinueConnecting2)
 				{
 					args.Handled = HandleConnecting(player);
@@ -126,30 +133,30 @@ namespace Chameleon
 					return true;
 				}
 
-				// 如果是配置中的之前登录 part.2
+				// 使用密码登录 part.2
 				player.RequiresPassword = true;
 				NetMessage.SendData((int)PacketTypes.PasswordRequired, player.Index);
 				return true;
 			}
-			else
-			{
-				// 未注册 part.1
-				player.SetData(WaitPwd4Reg, true);
-				NetMessage.SendData((int)PacketTypes.PasswordRequired, player.Index);
-				return true;
-			}
+
+			// 未注册 part.1
+			player.SetData(WaitPwd4Reg, true);
+			NetMessage.SendData((int)PacketTypes.PasswordRequired, player.Index);
+			return true;
 		}
 
 		private static bool HandlePassword(TSPlayer player, string password)
 		{
-			if (!player.RequiresPassword && !player.GetData<bool>(WaitPwd4Reg))
+			var isRegister = player.GetData<bool>(WaitPwd4Reg);
+
+			if (!player.RequiresPassword && !isRegister)
 				return true;
 
-			if (TShockAPI.Hooks.PlayerHooks.OnPlayerPreLogin(player, player.Name, password))
+			if (!isRegister && TShockAPI.Hooks.PlayerHooks.OnPlayerPreLogin(player, player.Name, password))
 				return true;
 
 			var user = TShock.Users.GetUserByName(player.Name);
-			if (user != null/* && !TShock.Config.DisableLoginBeforeJoin*/)
+			if (user != null)
 			{
 				if (user.VerifyPassword(password))
 				{
@@ -192,10 +199,10 @@ namespace Chameleon
 					TShockAPI.Hooks.PlayerHooks.OnPlayerPostLogin(player);
 					return true;
 				}
-				TShock.Utils.ForceKick(player, "账户密码错误. 若忘记, 请联系管理.", true);
+				TShock.Utils.ForceKick(player, "账户密码错误. 若忘记, 请联系管理.\r\n换行测试\r\n         请联系管理谢谢\r\n新测试", true);
 				return true;
 			}
-			if (user == null && player.Name != TSServerPlayer.AccountName)
+			if (player.Name != TSServerPlayer.AccountName)
 			{
 				user = new User
 				{
@@ -218,6 +225,7 @@ namespace Chameleon
 				TShock.Log.ConsoleInfo("玩家 {0} 注册了新账户: {1}.", player.Name, user.Name);
 
 				player.RequiresPassword = false;
+				player.SetData(WaitPwd4Reg, false);
 				player.PlayerData = TShock.CharacterDB.GetPlayerData(player, user.ID);
 
 				if (player.State == 1)
@@ -257,7 +265,8 @@ namespace Chameleon
 				return true;
 			}
 
-			TShock.Utils.ForceKick(player, "数次错误密码尝试.", true);
+			// 系统预留账户名
+			TShock.Utils.ForceKick(player, "该用户名已被占用.", true);
 			return true;
 		}
 	}
