@@ -70,6 +70,12 @@ namespace Chameleon
 				TShock.Log.ConsoleError("[Chameleon] 在启用本插件的情况下, 入服前登录将被强制开启.");
 				TShock.Config.DisableLoginBeforeJoin = true;
 			}
+
+			if (!TShock.Config.RequireLogin && !TShock.ServerSideCharacterConfig.Enabled)
+			{
+				TShock.Log.ConsoleError("[Chameleon] 在启用本插件的情况下, 注册登录将被强制开启.");
+				TShock.Config.RequireLogin = true;
+			}
 		}
 
 		private static void OnGetData(GetDataEventArgs args)
