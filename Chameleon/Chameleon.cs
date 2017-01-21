@@ -312,7 +312,7 @@ namespace Chameleon
 		private static void AddToList(string playerName)
 		{
 			var index = 0;
-			while (!string.IsNullOrEmpty(PrepareList[index])) index++;
+			while (index < PrepareList.Length && !string.IsNullOrEmpty(PrepareList[index])) index++;
 			PrepareList[index % PrepareList.Length] = playerName;
 		}
 
