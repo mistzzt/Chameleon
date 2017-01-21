@@ -54,6 +54,7 @@ namespace Chameleon
 			var data = memoryStream.ToArray();
 
 			TShock.Players[args.remoteClient].SendRawData(data);
+			Netplay.Clients[args.remoteClient].PendingTermination = true;
 			args.Handled = true;
 		}
 
