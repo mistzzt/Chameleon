@@ -7,6 +7,7 @@ using Terraria;
 using TerrariaApi.Server;
 using TShockAPI;
 using TShockAPI.DB;
+using TShockAPI.Hooks;
 
 namespace Chameleon
 {
@@ -37,18 +38,27 @@ namespace Chameleon
 			ServerApi.Hooks.GamePostInitialize.Register(this, OnPostInit, 9999);
 			ServerApi.Hooks.NetSendData.Register(this, OnSendData, 9999);
 			ServerApi.Hooks.GameInitialize.Register(this, OnInit);
+
+			GeneralHooks.ReloadEvent += ReloadConfig;
+		}
+
+		protected override void Dispose(bool disposing)
+		{
+			if (disposing)
+			{
+				ServerApi.Hooks.NetGetData.Deregister(this, OnGetData);
+				ServerApi.Hooks.GamePostInitialize.Deregister(this, OnPostInit);
+				ServerApi.Hooks.NetSendData.Deregister(this, OnSendData);
+				ServerApi.Hooks.GameInitialize.Deregister(this, OnInit);
+
+				GeneralHooks.ReloadEvent -= ReloadConfig;
+			}
+			base.Dispose(disposing);
 		}
 
 		private static void OnInit(EventArgs args)
 		{
-			Config = Configuration.Read(Configuration.FilePath);
-			Config.Write(Configuration.FilePath);
-
-			if (Config.AwaitBufferSize != Size)
-			{
-				Array.Resize(ref PrepareList, Size);
-				Array.Clear(PrepareList, 0, Config.AwaitBufferSize);
-			}
+			LoadConfig();
 		}
 
 		private static void OnSendData(SendDataEventArgs args)
@@ -343,6 +353,25 @@ namespace Chameleon
 			player.SilentKickInProgress = true;
 			player.Disconnect($"{custom}: {msg}");
 			TShock.Log.ConsoleInfo($"向{player.Name}发送通知完毕.");
+		}
+
+		private static void LoadConfig()
+		{
+			Config = Configuration.Read(Configuration.FilePath);
+			Config.Write(Configuration.FilePath);
+
+			if (Config.AwaitBufferSize != Size)
+			{
+				Array.Resize(ref PrepareList, Config.AwaitBufferSize);
+				Array.Clear(PrepareList, 0, Config.AwaitBufferSize);
+			}
+		}
+
+		private static void ReloadConfig(ReloadEventArgs args)
+		{
+			LoadConfig();
+
+			args.Player?.SendSuccessMessage("重新加载 {0} 配置完毕.", typeof(Chameleon).Name);
 		}
 	}
 }
