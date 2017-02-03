@@ -15,7 +15,11 @@ namespace Chameleon
 	{
 		public const string WaitPwd4Reg = "reg-pwd";
 
-		public static string[] PrepareList = new string[10];
+		public const ushort Size = 10;
+
+		internal static Configuration Config;
+
+		public static string[] PrepareList = new string[Size];
 
 		public override string Name => Assembly.GetExecutingAssembly().GetName().Name;
 
@@ -32,6 +36,19 @@ namespace Chameleon
 			ServerApi.Hooks.NetGetData.Register(this, OnGetData, 9999);
 			ServerApi.Hooks.GamePostInitialize.Register(this, OnPostInit, 9999);
 			ServerApi.Hooks.NetSendData.Register(this, OnSendData, 9999);
+			ServerApi.Hooks.GameInitialize.Register(this, OnInit);
+		}
+
+		private static void OnInit(EventArgs args)
+		{
+			Config = Configuration.Read(Configuration.FilePath);
+			Config.Write(Configuration.FilePath);
+
+			if (Config.AwaitBufferSize != Size)
+			{
+				Array.Resize(ref PrepareList, Size);
+				Array.Clear(PrepareList, 0, Config.AwaitBufferSize);
+			}
 		}
 
 		private static void OnSendData(SendDataEventArgs args)
@@ -173,15 +190,10 @@ namespace Chameleon
 				return true;
 			}
 
-			if (!PrepareList.Contains(player.Name))
+			if (Config.EnableForcedHint && !PrepareList.Contains(player.Name))
 			{
 				AddToList(player.Name);
-				Kick(player, "↓↓ 请看下面的提示以进服 ↓↓" +
-				             "\r\n \r\n         看完下面的再点哦→" +
-				             "\r\n 1. 请确保你已经阅读进服教程 http://tr.xcoder.cc/ " +
-				             "\r\n 2. 请再次加服 \r\n 3. 在\"服务器密码\"中输入自己的密码, 以后加服时输入这个密码即可." +
-				             "\r\n        Could not see words above? " +
-				             "\r\n             Go back and install Chinese version!");
+				Kick(player, string.Join("\n", Config.Hints), Config.Greeting);
 				return true;
 			}
 
@@ -321,16 +333,6 @@ namespace Chameleon
 			var index = 0;
 			while (index < PrepareList.Length && !string.IsNullOrEmpty(PrepareList[index])) index++;
 			PrepareList[index % PrepareList.Length] = playerName;
-		}
-
-		public static void Kick(TSPlayer player, string msg)
-		{
-			if (!player.ConnectionAlive)
-				return;
-
-			player.SilentKickInProgress = true;
-			player.Disconnect($"   欢迎来到Terraria Boss服务器: {msg}");
-			TShock.Log.ConsoleInfo($"向{player.Name}发送初次通知完毕.");
 		}
 
 		public static void Kick(TSPlayer player, string msg, string custom)
