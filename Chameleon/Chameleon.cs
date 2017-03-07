@@ -3,6 +3,7 @@ using System.IO;
 using System.IO.Streams;
 using System.Linq;
 using System.Reflection;
+using OTAPI;
 using Terraria;
 using TerrariaApi.Server;
 using TShockAPI;
@@ -30,25 +31,37 @@ namespace Chameleon
 
 		public override Version Version => Assembly.GetExecutingAssembly().GetName().Version;
 
-		public Chameleon(Main game) : base(game) { }
+		private readonly string _clientWasBooted;
+
+		public Chameleon(Main game) : base(game)
+		{
+			_clientWasBooted = Terraria.Localization.Language.GetTextValue("CLI.ClientWasBooted", "", "").Trim();
+		}
 
 		public override void Initialize()
 		{
+			Hooks.Console.WriteLine += OnWriteLine;
+
 			ServerApi.Hooks.NetGetData.Register(this, OnGetData, 9999);
 			ServerApi.Hooks.GamePostInitialize.Register(this, OnPostInit, 9999);
-			ServerApi.Hooks.NetSendData.Register(this, OnSendData, 9999);
 			ServerApi.Hooks.GameInitialize.Register(this, OnInit);
 
 			GeneralHooks.ReloadEvent += ReloadConfig;
+		}
+
+		private HookResult OnWriteLine(ConsoleHookArgs value)
+		{
+			return value.Arg1?.ToString().Contains(_clientWasBooted) == true ? HookResult.Cancel : HookResult.Continue;
 		}
 
 		protected override void Dispose(bool disposing)
 		{
 			if (disposing)
 			{
+				Hooks.Console.WriteLine -= OnWriteLine;
+
 				ServerApi.Hooks.NetGetData.Deregister(this, OnGetData);
 				ServerApi.Hooks.GamePostInitialize.Deregister(this, OnPostInit);
-				ServerApi.Hooks.NetSendData.Deregister(this, OnSendData);
 				ServerApi.Hooks.GameInitialize.Deregister(this, OnInit);
 
 				GeneralHooks.ReloadEvent -= ReloadConfig;
@@ -59,30 +72,6 @@ namespace Chameleon
 		private static void OnInit(EventArgs args)
 		{
 			LoadConfig();
-		}
-
-		private static void OnSendData(SendDataEventArgs args)
-		{
-			if (args.Handled || args.MsgId != PacketTypes.Disconnect)
-				return;
-
-			var memoryStream = new MemoryStream();
-			var binaryWriter = new BinaryWriter(memoryStream);
-			var position = binaryWriter.BaseStream.Position;
-			binaryWriter.BaseStream.Position += 2L;
-			binaryWriter.Write((byte)args.MsgId);
-
-			binaryWriter.Write(args.text);
-
-			var currentPosition = (int)binaryWriter.BaseStream.Position;
-			binaryWriter.BaseStream.Position = position;
-			binaryWriter.Write((short)currentPosition);
-			binaryWriter.BaseStream.Position = currentPosition;
-			var data = memoryStream.ToArray();
-
-			TShock.Players[args.remoteClient].SendRawData(data);
-			Netplay.Clients[args.remoteClient].PendingTermination = true;
-			args.Handled = true;
 		}
 
 		private static void OnPostInit(EventArgs args)
@@ -190,7 +179,7 @@ namespace Chameleon
 
 					player.SendSuccessMessage($"已经验证 {user.Name} 登录完毕.");
 					TShock.Log.ConsoleInfo(player.Name + " 成功验证登录.");
-					TShockAPI.Hooks.PlayerHooks.OnPlayerPostLogin(player);
+					PlayerHooks.OnPlayerPostLogin(player);
 					return true;
 				}
 
@@ -220,7 +209,7 @@ namespace Chameleon
 			if (!player.RequiresPassword && !isRegister)
 				return true;
 
-			if (!isRegister && TShockAPI.Hooks.PlayerHooks.OnPlayerPreLogin(player, player.Name, password))
+			if (!isRegister && PlayerHooks.OnPlayerPreLogin(player, player.Name, password))
 				return true;
 
 			var user = TShock.Users.GetUserByName(player.Name);
@@ -264,7 +253,7 @@ namespace Chameleon
 					player.SendSuccessMessage($"已经验证 {user.Name} 登录完毕.");
 					TShock.Log.ConsoleInfo(player.Name + " 成功验证登录.");
 					TShock.Users.SetUserUUID(user, player.UUID);
-					TShockAPI.Hooks.PlayerHooks.OnPlayerPostLogin(player);
+					PlayerHooks.OnPlayerPostLogin(player);
 					return true;
 				}
 				Kick(player, "账户密码错误. 若忘记, 请联系管理.", "验证失败");
@@ -329,7 +318,7 @@ namespace Chameleon
 				player.SendSuccessMessage($"已经验证 {user.Name} 登录完毕.");
 				TShock.Log.ConsoleInfo(player.Name + " 成功验证登录.");
 				TShock.Users.SetUserUUID(user, player.UUID);
-				TShockAPI.Hooks.PlayerHooks.OnPlayerPostLogin(player);
+				PlayerHooks.OnPlayerPostLogin(player);
 				return true;
 			}
 
