@@ -12,7 +12,7 @@ using TShockAPI.Hooks;
 
 namespace Chameleon
 {
-	[ApiVersion(2, 0)]
+	[ApiVersion(2, 1)]
 	public class Chameleon : TerrariaPlugin
 	{
 		public const string WaitPwd4Reg = "reg-pwd";
@@ -256,7 +256,7 @@ namespace Chameleon
 					PlayerHooks.OnPlayerPostLogin(player);
 					return true;
 				}
-				Kick(player, "账户密码错误. 若忘记, 请联系管理.", "验证失败");
+				Kick(player, Config.VerficationFailedMessage, "验证失败");
 				return true;
 			}
 			if (player.Name != TSServerPlayer.AccountName)
