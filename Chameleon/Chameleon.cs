@@ -78,18 +78,18 @@ namespace Chameleon
 		{
 			if (!string.IsNullOrEmpty(TShock.Config.ServerPassword) || !string.IsNullOrEmpty(Netplay.ServerPassword))
 			{
-				TShock.Log.ConsoleError("[Chameleon] 在启用本插件的情况下, 服务器密码功能将失效.");
+				TShock.Log.ConsoleError("[Chameleon] 在启用本插件的情况下，服务器密码功能将失效。");
 			}
 
 			if (TShock.Config.DisableLoginBeforeJoin)
 			{
-				TShock.Log.ConsoleError("[Chameleon] 在启用本插件的情况下, 入服前登录将被强制开启.");
+				TShock.Log.ConsoleError("[Chameleon] 在启用本插件的情况下，入服前登录将被强制开启。");
 				TShock.Config.DisableLoginBeforeJoin = true;
 			}
 
 			if (!TShock.Config.RequireLogin && !TShock.ServerSideCharacterConfig.Enabled)
 			{
-				TShock.Log.ConsoleError("[Chameleon] 在启用本插件的情况下, 注册登录将被强制开启.");
+				TShock.Log.ConsoleError("[Chameleon] 在启用本插件的情况下，注册登录将被强制开启。");
 				TShock.Config.RequireLogin = true;
 			}
 		}
@@ -250,8 +250,8 @@ namespace Chameleon
 						player.IgnoreActionsForDisabledArmor = "none";
 
 
-					player.SendSuccessMessage($"已经验证 {user.Name} 登录完毕.");
-					TShock.Log.ConsoleInfo(player.Name + " 成功验证登录.");
+					player.SendSuccessMessage($"已经验证{user.Name}登录完毕。");
+					TShock.Log.ConsoleInfo(player.Name + "成功验证登录。");
 					TShock.Users.SetUserUUID(user, player.UUID);
 					PlayerHooks.OnPlayerPostLogin(player);
 					return true;
@@ -273,13 +273,13 @@ namespace Chameleon
 				}
 				catch (ArgumentOutOfRangeException)
 				{
-					Kick(player, "密码位数不能少于 " + TShock.Config.MinimumPasswordLength + " 个字符.", "注册失败");
+					Kick(player, "密码位数不能少于" + TShock.Config.MinimumPasswordLength + "个字符。", "注册失败");
 					return true;
 				}
-				player.SendSuccessMessage("账户 {0} 注册成功.", user.Name);
-				player.SendSuccessMessage("你的密码是 {0}.", password);
+				player.SendSuccessMessage("账户{0}注册成功。", user.Name);
+				player.SendSuccessMessage("你的密码是{0}", password);
 				TShock.Users.AddUser(user);
-				TShock.Log.ConsoleInfo("玩家 {0} 注册了新账户: {1}.", player.Name, user.Name);
+				TShock.Log.ConsoleInfo("玩家{0}注册了新账户：{1}", player.Name, user.Name);
 
 				player.RequiresPassword = false;
 				player.SetData(WaitPwd4Reg, false);
@@ -315,15 +315,15 @@ namespace Chameleon
 					player.IgnoreActionsForDisabledArmor = "none";
 
 
-				player.SendSuccessMessage($"已经验证 {user.Name} 登录完毕.");
-				TShock.Log.ConsoleInfo(player.Name + " 成功验证登录.");
+				player.SendSuccessMessage($"已经验证{user.Name}登录完毕.");
+				TShock.Log.ConsoleInfo(player.Name + "成功验证登录.");
 				TShock.Users.SetUserUUID(user, player.UUID);
 				PlayerHooks.OnPlayerPostLogin(player);
 				return true;
 			}
 
 			// 系统预留账户名
-			Kick(player, "该用户名已被占用.", "请更换人物名");
+			Kick(player, "该用户名已被占用。", "请更换人物名");
 			return true;
 		}
 
@@ -340,7 +340,7 @@ namespace Chameleon
 				return;
 
 			player.SilentKickInProgress = true;
-			player.Disconnect($"{custom}: {msg}");
+			player.Disconnect($"{custom}：{msg}");
 			TShock.Log.ConsoleInfo($"向{player.Name}发送通知完毕.");
 		}
 
@@ -360,7 +360,7 @@ namespace Chameleon
 		{
 			LoadConfig();
 
-			args.Player?.SendSuccessMessage("重新加载 {0} 配置完毕.", typeof(Chameleon).Name);
+			args.Player?.SendSuccessMessage("重新加载{0}配置完毕.", typeof(Chameleon).Name);
 		}
 	}
 }
